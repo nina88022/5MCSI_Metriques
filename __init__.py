@@ -1,10 +1,9 @@
-from flask import Flask, render_template_string, render_template, jsonify
-from flask import render_template
+from flask import Flask, render_template, jsonify
 from flask import json
 from datetime import datetime
 from urllib.request import urlopen
-import sqlite3
-                                                                                                                                       
+import requests
+
 app = Flask(__name__)   
 
 @app.route('/')
@@ -35,9 +34,26 @@ def mongraphique():
 def histogramme():
     return render_template("histogramme.html")
 
+@app.route('/commits-data/')
+def get_commits_data():
+    url = "https://api.github.com/repos/OpenRSI/5MCSI_Metriques/commits"
+    response = requests.get(url)
+    if response.status_code == 200:
+        commits = response.json()
+        minutes_count = {}
+        for commit in commits:
+            date_string = commit.get('commit', {}).get('author', {}).get('date')
+            if date_string:
+                date_object = datetime.strptime(date_string, '%Y-%m-%dT%H:%M:%SZ')
+                minute = date_object.minute
+                minutes_count[minute] = minutes_count.get(minute, 0) + 1
+        return jsonify(results=[{'minute': k, 'commits': v} for k, v in sorted(minutes_count.items())])
+    else:
+        return jsonify({'error': 'Unable to fetch commits data'}), 500
 
+@app.route("/commits/")
+def commits():
+    return render_template("commits.html")
 
-
-  
 if __name__ == "__main__":
   app.run(debug=True)

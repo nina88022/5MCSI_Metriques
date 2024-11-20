@@ -1,10 +1,40 @@
-from flask import Flask, render_template, jsonify
+from flask import Flask, render_template_string, render_template, jsonify
+from flask import render_template
 from flask import json
 from datetime import datetime
 from urllib.request import urlopen
-import requests
-
+import sqlite3
+                                                                                                                                       
 app = Flask(__name__)   
+
+@app.route('/commits-data/')
+def get_commits_data():
+    # URL de l'API GitHub pour les commits
+    url = "https://api.github.com/repos/OpenRSI/5MCSI_Metriques/commits"
+    
+    try:
+        # Récupérer les données depuis l'API GitHub
+        response = requests.get(url)
+        response.raise_for_status()  # Vérifie les erreurs HTTP
+        commits = response.json()
+
+        # Extraire les minutes des dates des commits
+        minutes = []
+        for commit in commits:
+            date_string = commit['commit']['author']['date']
+            date_object = datetime.strptime(date_string, '%Y-%m-%dT%H:%M:%SZ')
+            minutes.append(date_object.minute)
+
+        # Compter les occurrences des minutes
+        minutes_count = Counter(minutes)
+
+        # Formater les données pour les graphiques
+        results = [{'minute': k, 'count': v} for k, v in sorted(minutes_count.items())]
+
+        return jsonify(results=results)
+    
+    except requests.RequestException as e:
+        return jsonify({'error': str(e)})
 
 @app.route('/')
 def hello_world():
@@ -34,26 +64,15 @@ def mongraphique():
 def histogramme():
     return render_template("histogramme.html")
 
-@app.route('/commits-data/')
-def get_commits_data():
-    url = "https://api.github.com/repos/OpenRSI/5MCSI_Metriques/commits"
-    response = requests.get(url)
-    if response.status_code == 200:
-        commits = response.json()
-        minutes_count = {}
-        for commit in commits:
-            date_string = commit.get('commit', {}).get('author', {}).get('date')
-            if date_string:
-                date_object = datetime.strptime(date_string, '%Y-%m-%dT%H:%M:%SZ')
-                minute = date_object.minute
-                minutes_count[minute] = minutes_count.get(minute, 0) + 1
-        return jsonify(results=[{'minute': k, 'commits': v} for k, v in sorted(minutes_count.items())])
-    else:
-        return jsonify({'error': 'Unable to fetch commits data'}), 500
-
-@app.route("/commits/")
+@app.route('/commits/')
 def commits():
-    return render_template("commits.html")
+    return render_template('commits.html')
 
+
+
+
+
+
+  
 if __name__ == "__main__":
   app.run(debug=True)

@@ -1,5 +1,5 @@
-from flask import Flask, rendertemplatestring, rendertemplate, jsonify
-from flask import rendertemplate
+from flask import Flask, rendertemplatestring, render_template, jsonify
+from flask import render_template
 from flask import json
 from datetime import datetime
 from urllib.request import urlopen
